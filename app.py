@@ -12,9 +12,9 @@ proxies = {"http": None, "https": None}
 logo_code = """
     _   __________  ___      __________  ____        _________    ____  __  ________   __
    / | / / ____/  |/  /     / ____/ __ \/ __ \      / ____/   |  / __ \/  |/  /  _/ | / /
-  /  |/ / /   / /|_/ /_____/ /_  / / / / /_/ /_____/ / __/ /| | / /_/ / /|_/ // //  |/ / 
- / /|  / /___/ /  / /_____/ __/ / /_/ / _, _/_____/ /_/ / ___ |/ _, _/ /  / // // /|  /  
-/_/ |_/\____/_/  /_/     /_/    \____/_/ |_|      \____/_/  |_/_/ |_/_/  /_/___/_/ |_/   
+  /  |/ / /   / /|_/ /_____/ /_  / / / / /_/ /_____/ / __/ /| | / /_/ / /|_/ // //  |/ /
+ / /|  / /___/ /  / /_____/ __/ / /_/ / _, _/_____/ /_/ / ___ |/ _, _/ /  / // // /|  /
+/_/ |_/\____/_/  /_/     /_/    \____/_/ |_|      \____/_/  |_/_/ |_/_/  /_/___/_/ |_/
 """
 
 requests.packages.urllib3.disable_warnings()
@@ -153,7 +153,7 @@ def download_track(track, cookies, br, path, local_path):
     cover_filename = local_path + check_filename(filename) + ".jpg"
 
     if os.path.exists(music_filename):
-        return
+        return (check_filename(filename) + ".mp3")
 
     track_request = requests.get(
         "https://ncm-api.zhelearn.com/song/download/url",
@@ -167,7 +167,7 @@ def download_track(track, cookies, br, path, local_path):
     decoded_response = json.loads(track_request.text)
     if decoded_response["data"]["url"] == None:
         tqdm.tqdm.write("音乐：%s，下载失败" % track["name"])
-        return
+        return (check_filename(filename) + ".mp3")
 
     file_request = requests.get(
         decoded_response["data"]["url"], headers=headers, proxies=proxies, verify=False, stream=True)
@@ -191,6 +191,8 @@ def download_track(track, cookies, br, path, local_path):
         with open(cover_filename, "rb") as cover:
             audio.tag.images.set(3, cover.read(), "image/jpeg")
         audio.tag.save(encoding='utf-8')
+
+    return (check_filename(filename) + ".mp3")
 
 
 def main():
@@ -263,9 +265,15 @@ def main():
     if not os.path.exists("./local-files/%s/" % check_filename(playlist["name"])):
         os.mkdir("./local-files/%s/" % check_filename(playlist["name"]))
 
-    for track in tqdm.tqdm(tracks, desc="下载中", unit="music"):
-        download_track(track, m_cookies, 128000,
-                       "./ncm-garmin-music/%s/" % check_filename(playlist["name"]), "./local-files/%s/" % check_filename(playlist["name"]))
+    if os.path.exists("./ncm-garmin-music/%s/%s.m3u" % (check_filename(playlist["name"]), check_filename(playlist["name"]))):
+        os.remove("./ncm-garmin-music/%s/%s.m3u" %
+                  (check_filename(playlist["name"]), check_filename(playlist["name"])))
+
+    with open("./ncm-garmin-music/%s/%s.m3u" % (check_filename(playlist["name"]), check_filename(playlist["name"])), "w", encoding="utf-8") as f:
+        for track in tqdm.tqdm(tracks, desc="下载中", unit="music"):
+            filename = download_track(track, m_cookies, 128000,
+                                      "./ncm-garmin-music/%s/" % check_filename(playlist["name"]), "./local-files/%s/" % check_filename(playlist["name"]))
+            f.write(".\\" + filename + "\n")
 
 
 if __name__ == "__main__":
