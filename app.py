@@ -258,14 +258,14 @@ def main():
     print("正在获取歌单列表......")
     # ignore the song_ids for now, it may come in useful later because the ecs
     tracks, song_ids = get_playlist_tracks(playlist["id"], m_cookies)
-    if not os.path.exists('./ncm-garmin-music/'):
-        os.mkdir("./ncm-garmin-music/")
-    if not os.path.exists('./local-files/'):
-        os.mkdir("./local-files/")
+    if not os.path.exists("./ncm-garmin-music/%s/" % check_filename(playlist["name"])):
+        os.mkdir("./ncm-garmin-music/%s/" % check_filename(playlist["name"]))
+    if not os.path.exists("./local-files/%s/" % check_filename(playlist["name"])):
+        os.mkdir("./local-files/%s/" % check_filename(playlist["name"]))
 
     for track in tqdm.tqdm(tracks, desc="下载中", unit="music"):
         download_track(track, m_cookies, 128000,
-                       "./ncm-garmin-music/", "./local-files/")
+                       "./ncm-garmin-music/%s/" % check_filename(playlist["name"]), "./local-files/%s/" % check_filename(playlist["name"]))
 
 
 if __name__ == "__main__":
