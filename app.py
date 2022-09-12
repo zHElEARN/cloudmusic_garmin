@@ -1,6 +1,9 @@
+import string
+import eyed3
 import requests
 import json
 import os
+import tqdm
 
 headers = {
     "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/105.0.0.0 Safari/537.36"
@@ -92,6 +95,104 @@ def get_user_playlist(uid, cookies):
     return created_playlist, collected_playlist
 
 
+def get_playlist_tracks(playlist_id, cookies):
+    song_id_list = []
+
+    tracks_request = requests.get(
+        "https://ncm-api.zhelearn.com/playlist/track/all",
+        params={"id": playlist_id},
+        headers=headers,
+        proxies=proxies,
+        cookies=cookies,
+        verify=False
+    )
+
+    decoded_response = json.loads(tracks_request.text)
+    for song in decoded_response["songs"]:
+        song_id_list.append(str(song["id"]))
+
+    return decoded_response["songs"], ",".join(song_id_list)
+
+
+def half_to_full(uchar):
+    inside_code = ord(uchar)
+    if inside_code < 0x0020 or inside_code > 0x7e:
+        return uchar
+    if inside_code == 0x0020:
+        inside_code = 0x3000
+    else:
+        inside_code += 0xfee0
+    return chr(inside_code)
+
+
+def check_filename(filename):
+    modified_filename = ""
+
+    validFilenameChars = "-_.() %s%s" % (string.ascii_letters, string.digits)
+    for i in range(0, len(filename)):
+        if filename[i] not in validFilenameChars:
+            modified_filename += half_to_full(filename[i])
+        else:
+            modified_filename += filename[i]
+
+    return modified_filename
+
+
+def download_track(track, cookies, br, path, local_path):
+    filename = ""
+    ar_list = []
+    if "pc" in track:
+        filename = track["pc"]["fn"]
+    else:
+        for ar in track["ar"]:
+            ar_list.append(ar["name"])
+
+        filename = track["name"] + " - " + ",".join(ar_list)
+
+    music_filename = path + check_filename(filename) + ".mp3"
+    cover_filename = local_path + check_filename(filename) + ".jpg"
+
+    if os.path.exists(music_filename):
+        return
+
+    track_request = requests.get(
+        "https://ncm-api.zhelearn.com/song/download/url",
+        params={"id": track["id"], "br": br},
+        headers=headers,
+        proxies=proxies,
+        cookies=cookies,
+        verify=False
+    )
+
+    decoded_response = json.loads(track_request.text)
+    if decoded_response["data"]["url"] == None:
+        tqdm.tqdm.write("音乐：%s，下载失败" % track["name"])
+        return
+
+    file_request = requests.get(
+        decoded_response["data"]["url"], headers=headers, proxies=proxies, verify=False, stream=True)
+
+    with open(music_filename, "wb") as f:
+        for chunk in file_request.iter_content(chunk_size=512):
+            f.write(chunk)
+
+    if "pc" not in track:
+        cover_request = requests.get(
+            track["al"]["picUrl"], headers=headers, proxies=proxies, verify=False, stream=True)
+        with open(cover_filename, "wb") as f:
+            for chunk in cover_request.iter_content(chunk_size=512):
+                f.write(chunk)
+
+        audio = eyed3.load(music_filename)
+        audio.tag.title = track["name"]
+        audio.tag.artist = ",".join(ar_list)
+        audio.tag.album = track["al"]["name"]
+
+        with open(cover_filename, "rb") as cover:
+            audio.tag.images.set(3, cover.read(), "image/jpeg")
+        audio.tag.save(encoding='utf-8')
+
+
 def main():
     m_cookies = m_nickname = m_userid = None
     m_created_playlist = m_collected_playlist = []
@@ -146,6 +247,25 @@ def main():
 
     answer_playlist_id = input("请输入歌单序号（数字）：")
     playlist = playlists[int(answer_playlist_id) - 1]
+    print("歌单名称：%s 歌单ID：%d 歌曲数：%d 音乐云盘歌曲数：%d 创建者：%s" %
+          (playlist["name"], playlist["id"], playlist["trackCount"], playlist["cloudTrackCount"], playlist["creator"]["nickname"]))
+
+    answer_playlist_download = input("是否开始下载？(Y/N)")
+    if answer_playlist_download != "y" and answer_playlist_download != "Y":
+        print("取消下载，退出程序")
+        return
+
+    print("正在获取歌单列表......")
+    # ignore the song_ids for now, it may come in useful later because the ecs
+    tracks, song_ids = get_playlist_tracks(playlist["id"], m_cookies)
+    if not os.path.exists('./ncm-garmin-music/'):
+        os.mkdir("./ncm-garmin-music/")
+    if not os.path.exists('./local-files/'):
+        os.mkdir("./local-files/")
+
+    for track in tqdm.tqdm(tracks, desc="下载中", unit="music"):
+        download_track(track, m_cookies, 128000,
+                       "./ncm-garmin-music/", "./local-files/")
 
 
 if __name__ == "__main__":
