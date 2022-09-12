@@ -145,7 +145,7 @@ def main():
         i += 1
 
     answer_playlist_id = input("请输入歌单序号（数字）：")
-    playlist = playlists[answer_playlist_id - 1]
+    playlist = playlists[int(answer_playlist_id) - 1]
 
 
 if __name__ == "__main__":
