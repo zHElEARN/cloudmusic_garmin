@@ -202,7 +202,7 @@ def main():
     print(logo_code)
 
     if os.path.exists("cookies.json"):
-        answer_playlist_type = input("检测到已缓存的Cookies，是否读取已缓存Cookies（Y/N)")
+        answer_playlist_type = input("检测到已缓存的Cookies，是否读取已缓存Cookies（Y/N)：")
         if answer_playlist_type == "Y" or answer_playlist_type == "y":
             login_result = check_existed_cookie("cookies.json")
             if login_result[0] != True:
@@ -227,37 +227,39 @@ def main():
             m_userid = login_result[3]
 
     print("登录成功，欢迎您，" + m_nickname)
-    print("正在获取歌单信息")
+    print("\n正在获取歌单信息......\n")
 
     m_created_playlist, m_collected_playlist = get_user_playlist(
         m_userid, m_cookies)
 
     print("请选择歌单类型：")
-    print("1. 用户创建的歌单（%d个）" % len(m_created_playlist))
-    print("2. 用户收藏的歌单（%d个）" % len(m_collected_playlist))
+    print("    1. 用户创建的歌单（%d个）" % len(m_created_playlist))
+    print("    2. 用户收藏的歌单（%d个）" % len(m_collected_playlist))
 
     answer_playlist_type = input("请输入歌单类型（数字）：")
     if answer_playlist_type != "1" and answer_playlist_type != "2":
         print("输入错误，请输入数字")
         return
 
+    print("\n歌单列表：")
+
     playlists = m_created_playlist if answer_playlist_type == "1" else m_collected_playlist
     i = 1
     for value in playlists:
-        print("%d：%s (%d)" % (i, value["name"], value["id"]))
+        print("    %d：%s (%d)" % (i, value["name"], value["id"]))
         i += 1
 
     answer_playlist_id = input("请输入歌单序号（数字）：")
     playlist = playlists[int(answer_playlist_id) - 1]
-    print("歌单名称：%s 歌单ID：%d 歌曲数：%d 音乐云盘歌曲数：%d 创建者：%s" %
+    print("\n歌单名称：%s 歌单ID：%d 歌曲数：%d 音乐云盘歌曲数：%d 创建者：%s" %
           (playlist["name"], playlist["id"], playlist["trackCount"], playlist["cloudTrackCount"], playlist["creator"]["nickname"]))
 
-    answer_playlist_download = input("是否开始下载？(Y/N)")
+    answer_playlist_download = input("\n是否开始下载？(Y/N)：")
     if answer_playlist_download != "y" and answer_playlist_download != "Y":
         print("取消下载，退出程序")
         return
 
-    print("正在获取歌单列表......")
+    print("\n正在获取歌单列表......\n")
     # ignore the song_ids for now, it may come in useful later because the ecs
     tracks, song_ids = get_playlist_tracks(playlist["id"], m_cookies)
     if not os.path.exists("./ncm-garmin-music/%s/" % check_filename(playlist["name"])):
