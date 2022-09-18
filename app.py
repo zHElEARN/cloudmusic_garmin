@@ -259,6 +259,11 @@ def main():
         print("取消下载，退出程序")
         return
 
+    raw_bit_rate = input("请输入下载码率（默认为128000）：")
+    bit_rate = 128000
+    if len(raw_bit_rate) != 0:
+        bit_rate = int(raw_bit_rate)
+
     print("\n正在获取歌单列表......\n")
     # ignore the song_ids for now, it may come in useful later because the ecs
     tracks, song_ids = get_playlist_tracks(playlist["id"], m_cookies)
@@ -273,7 +278,7 @@ def main():
 
     with open("./ncm-garmin-music/%s/%s.m3u" % (check_filename(playlist["name"]), check_filename(playlist["name"])), "w", encoding="utf-8") as f:
         for track in tqdm.tqdm(tracks, desc="下载中", unit="music"):
-            filename = download_track(track, m_cookies, 128000,
+            filename = download_track(track, m_cookies, bit_rate,
                                       "./ncm-garmin-music/%s/" % check_filename(playlist["name"]), "./local-files/%s/" % check_filename(playlist["name"]))
             f.write(".\\" + filename + "\n")
 
