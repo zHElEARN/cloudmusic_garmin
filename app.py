@@ -5,6 +5,8 @@ import json
 import os
 import tqdm
 
+import config
+
 headers = {
     "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/105.0.0.0 Safari/537.36"
 }
@@ -22,7 +24,7 @@ requests.packages.urllib3.disable_warnings()
 
 def login(username, password):
     login_request = requests.get(
-        "https://ncm-api.zhelearn.com/login/cellphone",
+        config.api_url + "login/cellphone",
         params={"phone": username, "password": password},
         headers=headers,
         proxies=proxies,
@@ -49,7 +51,7 @@ def check_login_status(cookies):
     encoded_cookies = requests.utils.cookiejar_from_dict(cookies)
 
     status_request = requests.get(
-        "https://ncm-api.zhelearn.com/login/status",
+        config.api_url + "login/status",
         headers=headers,
         proxies=proxies,
         cookies=encoded_cookies,
@@ -76,7 +78,7 @@ def get_user_playlist(uid, cookies):
     collected_playlist = []
 
     playlist_request = requests.get(
-        "https://ncm-api.zhelearn.com/user/playlist",
+        config.api_url + "user/playlist",
         params={"uid": uid},
         headers=headers,
         proxies=proxies,
@@ -99,7 +101,7 @@ def get_playlist_tracks(playlist_id, cookies):
     song_id_list = []
 
     tracks_request = requests.get(
-        "https://ncm-api.zhelearn.com/playlist/track/all",
+        config.api_url + "playlist/track/all",
         params={"id": playlist_id},
         headers=headers,
         proxies=proxies,
@@ -156,7 +158,7 @@ def download_track(track, cookies, br, path, local_path):
         return (check_filename(filename) + ".mp3")
 
     track_request = requests.get(
-        "https://ncm-api.zhelearn.com/song/download/url",
+        config.api_url + "song/download/url",
         params={"id": track["id"], "br": br},
         headers=headers,
         proxies=proxies,
