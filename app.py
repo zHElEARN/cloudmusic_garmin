@@ -7,17 +7,6 @@ import tqdm
 
 import config
 
-headers = {
-    "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/105.0.0.0 Safari/537.36"
-}
-proxies = {"http": None, "https": None}
-logo_code = """
-    _   __________  ___      __________  ____        _________    ____  __  ________   __
-   / | / / ____/  |/  /     / ____/ __ \/ __ \      / ____/   |  / __ \/  |/  /  _/ | / /
-  /  |/ / /   / /|_/ /_____/ /_  / / / / /_/ /_____/ / __/ /| | / /_/ / /|_/ // //  |/ /
- / /|  / /___/ /  / /_____/ __/ / /_/ / _, _/_____/ /_/ / ___ |/ _, _/ /  / // // /|  /
-/_/ |_/\____/_/  /_/     /_/    \____/_/ |_|      \____/_/  |_/_/ |_/_/  /_/___/_/ |_/
-"""
 
 requests.packages.urllib3.disable_warnings()
 
@@ -26,8 +15,8 @@ def login(username, password):
     login_request = requests.get(
         config.api_url + "login/cellphone",
         params={"phone": username, "password": password},
-        headers=headers,
-        proxies=proxies,
+        headers=config.headers,
+        proxies=config.proxies,
         verify=False
     )
 
@@ -52,8 +41,8 @@ def check_login_status(cookies):
 
     status_request = requests.get(
         config.api_url + "login/status",
-        headers=headers,
-        proxies=proxies,
+        headers=config.headers,
+        proxies=config.proxies,
         cookies=encoded_cookies,
         verify=False
     )
@@ -80,8 +69,8 @@ def get_user_playlist(uid, cookies):
     playlist_request = requests.get(
         config.api_url + "user/playlist",
         params={"uid": uid},
-        headers=headers,
-        proxies=proxies,
+        headers=config.headers,
+        proxies=config.proxies,
         cookies=cookies,
         verify=False
     )
@@ -103,8 +92,8 @@ def get_playlist_tracks(playlist_id, cookies):
     tracks_request = requests.get(
         config.api_url + "playlist/track/all",
         params={"id": playlist_id},
-        headers=headers,
-        proxies=proxies,
+        headers=config.headers,
+        proxies=config.proxies,
         cookies=cookies,
         verify=False
     )
@@ -155,24 +144,23 @@ def download_track(track, cookies, br, path, local_path):
     cover_filename = local_path + check_filename(filename) + ".jpg"
 
     if os.path.exists(music_filename):
-        return (check_filename(filename) + ".mp3")
+        return "exist", (check_filename(filename) + ".mp3")
 
     track_request = requests.get(
         config.api_url + "song/download/url",
         params={"id": track["id"], "br": br},
-        headers=headers,
-        proxies=proxies,
+        headers=config.headers,
+        proxies=config.proxies,
         cookies=cookies,
         verify=False
     )
 
     decoded_response = json.loads(track_request.text)
     if decoded_response["data"]["url"] == None:
-        tqdm.tqdm.write("音乐：%s，下载失败" % track["name"])
-        return (check_filename(filename) + ".mp3")
+        return "failed", (check_filename(filename) + ".mp3")
 
     file_request = requests.get(
-        decoded_response["data"]["url"], headers=headers, proxies=proxies, verify=False, stream=True)
+        decoded_response["data"]["url"], headers=config.headers, proxies=config.proxies, verify=False, stream=True)
 
     with open(music_filename, "wb") as f:
         for chunk in file_request.iter_content(chunk_size=512):
@@ -180,7 +168,7 @@ def download_track(track, cookies, br, path, local_path):
 
     if "pc" not in track:
         cover_request = requests.get(
-            track["al"]["picUrl"], headers=headers, proxies=proxies, verify=False, stream=True)
+            track["al"]["picUrl"], headers=config.headers, proxies=config.proxies, verify=False, stream=True)
         with open(cover_filename, "wb") as f:
             for chunk in cover_request.iter_content(chunk_size=512):
                 f.write(chunk)
@@ -194,14 +182,27 @@ def download_track(track, cookies, br, path, local_path):
             audio.tag.images.set(3, cover.read(), "image/jpeg")
         audio.tag.save(encoding='utf-8')
 
-    return (check_filename(filename) + ".mp3")
+    return "success", (check_filename(filename) + ".mp3")
+
+
+def check_music(ids):
+    check_request = requests.get(
+        config.api_url + "check/music",
+        headers=config.headers,
+        proxies=config.proxies,
+        verify=False,
+        params={ids: ",".join(ids)}
+    )
+
+    decoded_response = json.loads(check_request.text)
+    return decoded_response["success"], decoded_response["message"]
 
 
 def main():
     m_cookies = m_nickname = m_userid = None
     m_created_playlist = m_collected_playlist = []
 
-    print(logo_code)
+    print(config.logo_code)
 
     if os.path.exists("cookies.json"):
         answer_playlist_type = input("检测到已缓存的Cookies，是否读取已缓存Cookies（Y/N)：")
@@ -280,9 +281,14 @@ def main():
 
     with open("./ncm-garmin-music/%s/%s.m3u" % (check_filename(playlist["name"]), check_filename(playlist["name"])), "w", encoding="utf-8") as f:
         for track in tqdm.tqdm(tracks, desc="下载中", unit="music"):
-            filename = download_track(track, m_cookies, bit_rate,
-                                      "./ncm-garmin-music/%s/" % check_filename(playlist["name"]), "./local-files/%s/" % check_filename(playlist["name"]))
-            f.write(".\\" + filename + "\n")
+            status, filename = download_track(track, m_cookies, bit_rate,
+                                              "./ncm-garmin-music/%s/" % check_filename(playlist["name"]), "./local-files/%s/" % check_filename(playlist["name"]))
+            if status == "failed":
+                success, message = check_music(str([track["id"]]))
+                tqdm.tqdm.write("音乐 %s [%d]，下载失败，提示信息：“%s”" %
+                                (track["name"], track["id"], message))
+            else:
+                f.write(".\\" + filename + "\n")
 
 
 if __name__ == "__main__":
