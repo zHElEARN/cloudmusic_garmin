@@ -279,16 +279,23 @@ def main():
         os.remove("./ncm-garmin-music/%s/%s.m3u" %
                   (check_filename(playlist["name"]), check_filename(playlist["name"])))
 
-    with open("./ncm-garmin-music/%s/%s.m3u" % (check_filename(playlist["name"]), check_filename(playlist["name"])), "w", encoding="utf-8") as f:
-        for track in tqdm.tqdm(tracks, desc="下载中", unit="music"):
-            status, filename = download_track(track, m_cookies, bit_rate,
-                                              "./ncm-garmin-music/%s/" % check_filename(playlist["name"]), "./local-files/%s/" % check_filename(playlist["name"]))
-            if status == "failed":
-                success, message = check_music(str([track["id"]]))
-                tqdm.tqdm.write("音乐 %s [%d]，下载失败，提示信息：“%s”" %
-                                (track["name"], track["id"], message))
-            else:
-                f.write(".\\" + filename + "\n")
+    m3u_file = None
+    answer_create_m3u = input("是否创建m3u歌单文件（Y/N）：")
+    if answer_create_m3u == "Y" or answer_create_m3u == "y":
+        m3u_file = open("./ncm-garmin-music/%s/%s.m3u" % (check_filename(
+            playlist["name"]), check_filename(playlist["name"])), "w", encoding="utf-8")
+
+    for track in tqdm.tqdm(tracks, desc="下载中", unit="music"):
+        status, filename = download_track(track, m_cookies, bit_rate,
+                                          "./ncm-garmin-music/%s/" % check_filename(playlist["name"]), "./local-files/%s/" % check_filename(playlist["name"]))
+        if status == "failed":
+            success, message = check_music(str([track["id"]]))
+            tqdm.tqdm.write("音乐 %s [%d]，下载失败，提示信息：“%s”" %
+                            (track["name"], track["id"], message))
+        else:
+            m3u_file.write(".\\" + filename + "\n")
+    
+    m3u_file.close()
 
 
 if __name__ == "__main__":
