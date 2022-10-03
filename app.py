@@ -215,19 +215,19 @@ def main():
             m_nickname = login_result[1]
             m_cookies = login_result[2]
             m_userid = login_result[3]
-        else:
-            username = input("请输入您的用户名（手机号）：")
-            password = input("请输入您的密码：")
+    else:
+        username = input("请输入您的用户名（手机号）：")
+        password = input("请输入您的密码：")
 
-            login_result = login(username, password)
-            if login_result[0] != 200:
-                print("登录失败，错误代码：" +
-                      str(login_result[0]) + "，错误信息：" + login_result[1])
-                return
+        login_result = login(username, password)
+        if login_result[0] != 200:
+            print("登录失败，错误代码：" +
+                  str(login_result[0]) + "，错误信息：" + login_result[1])
+            return
 
-            m_nickname = login_result[1]
-            m_cookies = login_result[2]
-            m_userid = login_result[3]
+        m_nickname = login_result[1]
+        m_cookies = login_result[2]
+        m_userid = login_result[3]
 
     print("登录成功，欢迎您，" + m_nickname)
     print("\n正在获取歌单信息......\n")
@@ -294,7 +294,7 @@ def main():
                             (track["name"], track["id"], message))
         else:
             m3u_file.write(".\\" + filename + "\n")
-    
+
     m3u_file.close()
 
 
