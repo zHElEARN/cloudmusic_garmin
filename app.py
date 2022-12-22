@@ -214,22 +214,20 @@ def main():
 
     print(config.logo_code)
 
-    if not os.path.exists("./ncm-garmin-music"):
-        os.mkdir("./ncm-garmin-music")
-    if not os.path.exists("./local-files"):
-        os.mkdir("./local-files")
+    if not os.path.exists(config.download_path):
+        os.makedirs(config.download_path)
+    if not os.path.exists(config.tempfile_path):
+        os.makedirs(config.tempfile_path)
 
-    if os.path.exists("cookies.json"):
+    if os.path.exists(config.saved_cookie):
         answer_playlist_type = input("检测到已缓存的Cookies，是否读取已缓存Cookies（Y/N)：")
         if answer_playlist_type == "Y" or answer_playlist_type == "y":
-            login_result = check_existed_cookie("cookies.json")
+            login_result = check_existed_cookie(config.saved_cookie)
             if login_result[0] != True:
                 print("登录失败，请尝试密码登录")
                 return
 
-            m_nickname = login_result[1]
-            m_cookies = login_result[2]
-            m_userid = login_result[3]
+            m_nickname, m_cookies, m_userid = login_result[1], login_result[2], login_result[3]
     else:
         username = input("请输入您的用户名（手机号）：")
         password = input("请输入您的密码：")
@@ -240,9 +238,7 @@ def main():
                   str(login_result[0]) + "，错误信息：" + login_result[1])
             return
 
-        m_nickname = login_result[1]
-        m_cookies = login_result[2]
-        m_userid = login_result[3]
+        m_nickname, m_cookies, m_userid = login_result[1], login_result[2], login_result[3]
 
     print("登录成功，欢迎您，" + m_nickname)
     print("\n正在获取歌单信息......\n")
@@ -285,33 +281,32 @@ def main():
     print("\n正在获取歌单列表......\n")
     # ignore the song_ids for now, it may come in useful later because the ecs
     tracks, song_ids = get_playlist_tracks(playlist["id"], m_cookies)
-    if not os.path.exists("./ncm-garmin-music/%s/" % check_filename(playlist["name"])):
-        os.mkdir("./ncm-garmin-music/%s/" % check_filename(playlist["name"]))
-    if not os.path.exists("./local-files/%s/" % check_filename(playlist["name"])):
-        os.mkdir("./local-files/%s/" % check_filename(playlist["name"]))
+    if not os.path.exists("%s/%s/" % (config.download_path, check_filename(playlist["name"]))):
+        os.makedirs("%s/%s/" % (config.download_path,
+                                check_filename(playlist["name"])))
+    if not os.path.exists("%s/%s/" % (config.tempfile_path, check_filename(playlist["name"]))):
+        os.makedirs("%s/%s/" % (config.tempfile_path,
+                                check_filename(playlist["name"])))
 
-    if os.path.exists("./ncm-garmin-music/%s/%s.m3u" % (check_filename(playlist["name"]), check_filename(playlist["name"]))):
-        os.remove("./ncm-garmin-music/%s/%s.m3u" %
-                  (check_filename(playlist["name"]), check_filename(playlist["name"])))
+    if os.path.exists("%s/%s/playlist.m3u" % (config.download_path, check_filename(playlist["name"]))):
+        os.remove("%s/%s/playlist.m3u" %
+                  (config.download_path, check_filename(playlist["name"])))
 
-    m3u_file = None
-    create_m3u = False
-    answer_create_m3u = input("是否创建m3u歌单文件（Y/N）：")
-    if answer_create_m3u == "Y" or answer_create_m3u == "y":
-        create_m3u = True
-        m3u_file = open("./ncm-garmin-music/%s/%s.m3u" % (check_filename(
-            playlist["name"]), check_filename(playlist["name"])), "w", encoding="utf-8")
+    m3u_file = open("%s/%s/playlist.m3u" % (config.download_path,
+                                            check_filename(playlist["name"])), "w", encoding="utf-8")
 
     for track in tqdm.tqdm(tracks, desc="下载中", unit="music"):
         status, filename = download_track(track, m_cookies, bit_rate,
-                                          "./ncm-garmin-music/%s/" % check_filename(playlist["name"]), "./local-files/%s/" % check_filename(playlist["name"]))
+                                          "%s/%s/" % (config.download_path,
+                                                      check_filename(playlist["name"])),
+                                          "%s/%s/" % (config.tempfile_path,
+                                                      check_filename(playlist["name"])))
         if status == "failed":
             success, message = check_music(str([track["id"]]))
             tqdm.tqdm.write("音乐 %s [%d]，下载失败，提示信息：“%s”" %
                             (track["name"], track["id"], message))
         else:
-            if create_m3u:
-                m3u_file.write(".\\" + filename + "\n")
+            m3u_file.write(filename + "\n")
 
     m3u_file.close()
 
