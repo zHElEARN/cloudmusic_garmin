@@ -7,6 +7,7 @@ import tqdm
 
 import config
 
+from eyed3.id3.frames import ImageFrame
 
 requests.packages.urllib3.disable_warnings()
 
@@ -116,6 +117,7 @@ def half_to_full(uchar):
     return chr(inside_code)
 
 
+# set the file name to valid
 def check_filename(filename):
     modified_filename = ""
 
@@ -131,20 +133,24 @@ def check_filename(filename):
 
 def download_track(track, cookies, br, path, local_path):
     filename = ""
-    ar_list = []
+    artist_list = []
+
+    # cloud storage music
     if "pc" in track:
         filename = track["pc"]["fn"]
+    # platform music
     else:
         for ar in track["ar"]:
-            ar_list.append(ar["name"])
+            artist_list.append(ar["name"])
 
-        filename = track["name"] + " - " + ",".join(ar_list)
+        filename = track["name"] + " - " + ",".join(artist_list)
 
-    music_filename = path + check_filename(filename) + ".mp3"
+    music_filename = path + \
+        check_filename(filename) + (".mp3" if "pc" not in track else "")
     cover_filename = local_path + check_filename(filename) + ".jpg"
 
     if os.path.exists(music_filename):
-        return "exist", (check_filename(filename) + ".mp3")
+        return "exist", (check_filename(filename) + (".mp3" if "pc" not in track else ""))
 
     track_request = requests.get(
         config.api_url + "song/download/url",
@@ -166,6 +172,8 @@ def download_track(track, cookies, br, path, local_path):
         for chunk in file_request.iter_content(chunk_size=512):
             f.write(chunk)
 
+    # if the music is cloud stroage music, it is not processed
+    # otherwise, need to manually add the id3v2 label
     if "pc" not in track:
         cover_request = requests.get(
             track["al"]["picUrl"], headers=config.headers, proxies=config.proxies, verify=False, stream=True)
@@ -174,15 +182,17 @@ def download_track(track, cookies, br, path, local_path):
                 f.write(chunk)
 
         audio = eyed3.load(music_filename)
+        audio.initTag()
         audio.tag.title = track["name"]
-        audio.tag.artist = ",".join(ar_list)
+        audio.tag.artist = ",".join(artist_list)
         audio.tag.album = track["al"]["name"]
 
         with open(cover_filename, "rb") as cover:
-            audio.tag.images.set(3, cover.read(), "image/jpeg")
-        audio.tag.save(encoding='utf-8')
+            audio.tag.images.set(ImageFrame.FRONT_COVER,
+                                 cover.read(), "image/jpeg")
+        audio.tag.save(encoding='utf-16', version=eyed3.id3.ID3_V2_3)
 
-    return "success", (check_filename(filename) + ".mp3")
+    return "success", (check_filename(filename) + (".mp3" if "pc" not in track else ""))
 
 
 def check_music(ids):
@@ -203,6 +213,11 @@ def main():
     m_created_playlist = m_collected_playlist = []
 
     print(config.logo_code)
+
+    if not os.path.exists("./ncm-garmin-music"):
+        os.mkdir("./ncm-garmin-music")
+    if not os.path.exists("./local-files"):
+        os.mkdir("./local-files")
 
     if os.path.exists("cookies.json"):
         answer_playlist_type = input("检测到已缓存的Cookies，是否读取已缓存Cookies（Y/N)：")
@@ -280,8 +295,10 @@ def main():
                   (check_filename(playlist["name"]), check_filename(playlist["name"])))
 
     m3u_file = None
+    create_m3u = False
     answer_create_m3u = input("是否创建m3u歌单文件（Y/N）：")
     if answer_create_m3u == "Y" or answer_create_m3u == "y":
+        create_m3u = True
         m3u_file = open("./ncm-garmin-music/%s/%s.m3u" % (check_filename(
             playlist["name"]), check_filename(playlist["name"])), "w", encoding="utf-8")
 
@@ -293,7 +310,8 @@ def main():
             tqdm.tqdm.write("音乐 %s [%d]，下载失败，提示信息：“%s”" %
                             (track["name"], track["id"], message))
         else:
-            m3u_file.write(".\\" + filename + "\n")
+            if create_m3u:
+                m3u_file.write(".\\" + filename + "\n")
 
     m3u_file.close()
 

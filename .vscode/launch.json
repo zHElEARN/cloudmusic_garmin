@@ -5,7 +5,7 @@
     "version": "0.2.0",
     "configurations": [
         {
-            "name": "Python: Launch ncm-for-garmin",
+            "name": "Python: Launch cloudmusic_downloader",
             "type": "python",
             "request": "launch",
             "program": "app.py",
