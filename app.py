@@ -190,7 +190,7 @@ def download_track(track, cookies, br, path, local_path):
         with open(cover_filename, "rb") as cover:
             audio.tag.images.set(ImageFrame.FRONT_COVER,
                                  cover.read(), "image/jpeg")
-        audio.tag.save(encoding='utf-16', version=eyed3.id3.ID3_V2_3)
+        audio.tag.save(encoding='utf-8')
 
     return "success", (check_filename(filename) + (".mp3" if "pc" not in track else ""))
 
