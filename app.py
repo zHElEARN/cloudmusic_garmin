@@ -6,6 +6,7 @@ import os
 import tqdm
 
 import config
+import utils
 
 from eyed3.id3.frames import ImageFrame
 from rich import progress
@@ -166,8 +167,7 @@ def download_track(track, cookies, br, path, local_path):
     if decoded_response["data"]["url"] == None:
         return "failed", (check_filename(filename) + ".mp3")
 
-    file_request = requests.get(
-        decoded_response["data"]["url"], headers=config.headers, proxies=config.proxies, verify=False, stream=True)
+    file_request = requests.get(decoded_response["data"]["url"], headers=config.headers, proxies=config.proxies, verify=False, stream=True)
 
     with open(music_filename, "wb") as f:
         for chunk in file_request.iter_content(chunk_size=512):
@@ -176,8 +176,7 @@ def download_track(track, cookies, br, path, local_path):
     # if the music is cloud stroage music, it is not processed
     # otherwise, need to manually add the id3v2 label
     if "pc" not in track:
-        cover_request = requests.get(
-            track["al"]["picUrl"], headers=config.headers, proxies=config.proxies, verify=False, stream=True)
+        cover_request = requests.get(track["al"]["picUrl"], headers=config.headers, proxies=config.proxies, verify=False, stream=True)
         with open(cover_filename, "wb") as f:
             for chunk in cover_request.iter_content(chunk_size=512):
                 f.write(chunk)
@@ -189,8 +188,7 @@ def download_track(track, cookies, br, path, local_path):
         audio.tag.album = track["al"]["name"]
 
         with open(cover_filename, "rb") as cover:
-            audio.tag.images.set(ImageFrame.FRONT_COVER,
-                                 cover.read(), "image/jpeg")
+            audio.tag.images.set(ImageFrame.FRONT_COVER, cover.read(), "image/jpeg")
         audio.tag.save(encoding='utf-8')
 
     return "success", (check_filename(filename) + (".mp3" if "pc" not in track else ""))
@@ -215,10 +213,8 @@ def main():
 
     print(config.logo_code)
 
-    if not os.path.exists(config.download_path):
-        os.makedirs(config.download_path)
-    if not os.path.exists(config.tempfile_path):
-        os.makedirs(config.tempfile_path)
+    utils.not_exist_makedirs(config.download_path)
+    utils.not_exist_makedirs(config.tempfile_path)
 
     if os.path.exists(config.saved_cookie):
         answer_playlist_type = input("检测到已缓存的Cookies，是否读取已缓存Cookies（Y/N)：")
@@ -282,30 +278,24 @@ def main():
     print("\n正在获取歌单列表......\n")
     # ignore the song_ids for now, it may come in useful later because the ecs
     tracks, song_ids = get_playlist_tracks(playlist["id"], m_cookies)
-    if not os.path.exists("%s/%s/" % (config.download_path, check_filename(playlist["name"]))):
-        os.makedirs("%s/%s/" % (config.download_path,
-                                check_filename(playlist["name"])))
-    if not os.path.exists("%s/%s/" % (config.tempfile_path, check_filename(playlist["name"]))):
-        os.makedirs("%s/%s/" % (config.tempfile_path,
-                                check_filename(playlist["name"])))
 
-    if os.path.exists("%s/%s/%s.m3u" % (config.download_path, check_filename(playlist["name"]), check_filename(playlist["name"]))):
-        os.remove("%s/%s/%s.m3u" % (config.download_path,
-                  check_filename(playlist["name"]), check_filename(playlist["name"])))
+    playlist_name = check_filename(playlist["name"])
+    download_path = "%s/%s/" % (config.download_path, playlist_name)
+    tempfile_path = "%s/%s/" % (config.tempfile_path, playlist_name)
+    m3u_path = "%s/%s/%s.m3u" % (config.download_path, playlist_name, playlist_name)
 
-    m3u_file = open("%s/%s/%s.m3u" % (config.download_path, check_filename(
-        playlist["name"]), check_filename(playlist["name"])), "w", encoding="utf-8")
+    utils.not_exist_makedirs(download_path)
+    utils.not_exist_makedirs(tempfile_path)
+
+    utils.exist_remove(m3u_path)
+
+    m3u_file = open(m3u_path, "w", encoding="utf-8")
 
     for track in progress.track(tracks, description="下载中", auto_refresh=True):
-        status, filename = download_track(track, m_cookies, bit_rate,
-                                          "%s/%s/" % (config.download_path,
-                                                      check_filename(playlist["name"])),
-                                          "%s/%s/" % (config.tempfile_path,
-                                                      check_filename(playlist["name"])))
+        status, filename = download_track(track, m_cookies, bit_rate, download_path, tempfile_path)
         if status == "failed":
             success, message = check_music(str([track["id"]]))
-            progress.console.print("音乐 %s [%d]，下载失败，提示信息：“%s”" %
-                                   (track["name"], track["id"], message))
+            progress.console.print("音乐 %s [%d]，下载失败，提示信息：“%s”" % (track["name"], track["id"], message))
         else:
             m3u_file.write(filename + "\n")
 
