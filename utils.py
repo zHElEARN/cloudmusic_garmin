@@ -1,9 +1,11 @@
+from eyed3.id3.frames import ImageFrame
 import os
 import string
 import eyed3
 import requests
+import json
 
-from eyed3.id3.frames import ImageFrame
+import cloudmusic
 
 
 def not_exist_makedirs(name):
@@ -55,3 +57,15 @@ def download_file(url, filename, config):
     with open(filename, "wb") as f:
         for chunk in r.iter_content(chunk_size=1024):
             f.write(chunk)
+
+
+def save_cookies(filename, cookies):
+    with open(filename, "w") as f:
+        f.write(json.dumps(requests.utils.dict_from_cookiejar(cookies)))
+
+
+def check_existed_cookie(filename):
+    with open(filename, "r") as f:
+        load_cookies = json.loads(f.read())
+
+    return cloudmusic.check_login_status(load_cookies)
