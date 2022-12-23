@@ -270,10 +270,10 @@ def main():
         print("取消下载，退出程序")
         return
 
-    raw_bit_rate = input("请输入下载码率（默认为128000）：")
+    #raw_bit_rate = input("请输入下载码率（默认为128000）：")
     bit_rate = 128000
-    if len(raw_bit_rate) != 0:
-        bit_rate = int(raw_bit_rate)
+    # if len(raw_bit_rate) != 0:
+    #    bit_rate = int(raw_bit_rate)
 
     print("\n正在获取歌单列表......\n")
     # ignore the song_ids for now, it may come in useful later because the ecs
