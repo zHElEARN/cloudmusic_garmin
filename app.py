@@ -1,9 +1,7 @@
-import string
 import eyed3
 import requests
 import json
 import os
-import tqdm
 
 from config import *
 import utils
@@ -105,33 +103,7 @@ def get_playlist_tracks(playlist_id, cookies):
     )
 
     decoded_response = json.loads(tracks_request.text)
-    song_id_list = [str(song["id"]) for song in decoded_response["songs"]]
-    return decoded_response["songs"], ",".join(song_id_list)
-
-
-def half_to_full(uchar):
-    inside_code = ord(uchar)
-    if inside_code < 0x0020 or inside_code > 0x7E:
-        return uchar
-    if inside_code == 0x0020:
-        inside_code = 0x3000
-    else:
-        inside_code += 0xFEE0
-    return chr(inside_code)
-
-
-# set the file name to valid
-def check_filename(filename):
-    modified_filename = ""
-
-    validFilenameChars = f"-_.() {string.ascii_letters}{string.digits}"
-    for i in range(len(filename)):
-        if filename[i] not in validFilenameChars:
-            modified_filename += half_to_full(filename[i])
-        else:
-            modified_filename += filename[i]
-
-    return modified_filename
+    return decoded_response["songs"]
 
 
 def download_track(track, cookies, br, path, local_path):
@@ -145,11 +117,11 @@ def download_track(track, cookies, br, path, local_path):
         artist_list.extend(ar["name"] for ar in track["ar"])
         filename = track["name"] + " - " + ",".join(artist_list)
 
-    music_filename = path + check_filename(filename) + (".mp3" if "pc" not in track else "")
-    cover_filename = local_path + check_filename(filename) + ".jpg"
+    music_filename = path + utils.valid_filename(filename) + (".mp3" if "pc" not in track else "")
+    cover_filename = local_path + utils.valid_filename(filename) + ".jpg"
 
     if os.path.exists(music_filename):
-        return "exist", (check_filename(filename) + (".mp3" if "pc" not in track else ""))
+        return "exist", (utils.valid_filename(filename) + (".mp3" if "pc" not in track else ""))
 
     track_request = requests.get(
         f"{config['api_url']}song/download/url",
@@ -162,35 +134,20 @@ def download_track(track, cookies, br, path, local_path):
 
     decoded_response = json.loads(track_request.text)
     if decoded_response["data"]["url"] is None:
-        return "failed", f"{check_filename(filename)}.mp3"
+        return "failed", f"{utils.valid_filename(filename)}.mp3"
 
-    file_request = requests.get(
-        decoded_response["data"]["url"], headers=config["headers"], proxies=config["proxies"], verify=False, stream=True
-    )
-
-    with open(music_filename, "wb") as f:
-        for chunk in file_request.iter_content(chunk_size=512):
-            f.write(chunk)
+    utils.download_file(decoded_response["data"]["url"], music_filename, config)
 
     # if the music is cloud stroage music, it is not processed
     # otherwise, need to manually add the id3v2 label
     if "pc" not in track:
-        cover_request = requests.get(track["al"]["picUrl"], headers=config["headers"], proxies=config["proxies"], verify=False, stream=True)
-        with open(cover_filename, "wb") as f:
-            for chunk in cover_request.iter_content(chunk_size=512):
-                f.write(chunk)
+        utils.download_file(track["al"]["picUrl"], cover_filename, config)
 
-        audio = eyed3.load(music_filename)
-        audio.initTag()
-        audio.tag.title = track["name"]
-        audio.tag.artist = ",".join(artist_list)
-        audio.tag.album = track["al"]["name"]
+        utils.config_music(
+            music_filename, {"title": track["name"], "artists": artist_list, "album": track["al"]["name"], "cover": cover_filename}
+        )
 
-        with open(cover_filename, "rb") as cover:
-            audio.tag.images.set(ImageFrame.FRONT_COVER, cover.read(), "image/jpeg")
-        audio.tag.save(encoding="utf-8")
-
-    return "success", (check_filename(filename) + (".mp3" if "pc" not in track else ""))
+    return "success", (utils.valid_filename(filename) + (".mp3" if "pc" not in track else ""))
 
 
 def check_music(ids):
@@ -199,7 +156,7 @@ def check_music(ids):
     )
 
     decoded_response = json.loads(check_request.text)
-    return decoded_response["success"], decoded_response["message"]
+    return decoded_response["message"]
 
 
 def main():
@@ -270,9 +227,9 @@ def main():
 
     print("\n正在获取歌单列表......\n")
     # ignore the song_ids for now, it may come in useful later because the ecs
-    tracks, song_ids = get_playlist_tracks(playlist["id"], m_cookies)
+    tracks = get_playlist_tracks(playlist["id"], m_cookies)
 
-    playlist_name = check_filename(playlist["name"])
+    playlist_name = utils.valid_filename(playlist["name"])
     download_path = f"{config['download_path']}/{playlist_name}/"
     tempfile_path = f"{config['tempfile_path']}/{playlist_name}/"
     m3u_path = f"{config['download_path']}/{playlist_name}/{playlist_name}.m3u"
@@ -282,17 +239,14 @@ def main():
 
     utils.exist_remove(m3u_path)
 
-    m3u_file = open(m3u_path, "w", encoding="utf-8")
-
-    for track in progress.track(tracks, description="下载中", auto_refresh=True):
-        status, filename = download_track(track, m_cookies, bit_rate, download_path, tempfile_path)
-        if status == "failed":
-            success, message = check_music(str([track["id"]]))
-            progress.console.print("音乐 %s [%d]，下载失败，提示信息：“%s”" % (track["name"], track["id"], message))
-        else:
-            m3u_file.write(filename + "\n")
-
-    m3u_file.close()
+    with open(m3u_path, "w", encoding="utf-8") as m3u_file:
+        for track in progress.track(tracks, description="下载中", auto_refresh=True):
+            status, filename = download_track(track, m_cookies, bit_rate, download_path, tempfile_path)
+            if status == "failed":
+                message = check_music(str([track["id"]]))
+                progress.console.print("音乐 %s [%d]，下载失败，提示信息：“%s”" % (track["name"], track["id"], message))
+            else:
+                m3u_file.write(filename + "\n")
 
 
 if __name__ == "__main__":
