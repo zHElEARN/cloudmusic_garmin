@@ -168,6 +168,18 @@ def main():
     utils.not_exist_makedirs(config["download_path"])
     utils.not_exist_makedirs(config["tempfile_path"])
 
+    def password():
+        nonlocal m_nickname, m_cookies, m_userid
+        username = input("请输入您的用户名（手机号）：")
+        password = input("请输入您的密码：")
+
+        login_result = login(username, password)
+        if login_result[0] != 200:
+            print(f"登录失败，错误代码：{str(login_result[0])}，错误信息：{login_result[1]}")
+            exit(-1)
+
+        m_nickname, m_cookies, m_userid = login_result[1], login_result[2], login_result[3]
+
     if os.path.exists(config["saved_cookie"]):
         answer_playlist_type = input("检测到已缓存的Cookies，是否读取已缓存Cookies（Y/N)：")
         if answer_playlist_type in ["Y", "y"]:
@@ -177,16 +189,10 @@ def main():
                 return
 
             m_nickname, m_cookies, m_userid = login_result[1], login_result[2], login_result[3]
+        else:
+            password()
     else:
-        username = input("请输入您的用户名（手机号）：")
-        password = input("请输入您的密码：")
-
-        login_result = login(username, password)
-        if login_result[0] != 200:
-            print(f"登录失败，错误代码：{str(login_result[0])}，错误信息：{login_result[1]}")
-            return
-
-        m_nickname, m_cookies, m_userid = login_result[1], login_result[2], login_result[3]
+        password()
 
     print(f"登录成功，欢迎您，{m_nickname}")
     print("\n正在获取歌单信息......\n")
