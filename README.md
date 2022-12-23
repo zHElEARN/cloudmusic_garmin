@@ -1,4 +1,4 @@
-# cloudmusic_downloader
+# cloudmusic_garmin
 
 ## 软件说明
 
@@ -10,11 +10,11 @@
 
 ## 使用方法
 
--   克隆或[下载](https://github.com/zHElEARN/cloudmusic_downloader/archive/refs/heads/main.zip)此项目
+-   克隆或[下载](https://github.com/zHElEARN/cloudmusic_garmin/archive/refs/heads/main.zip)此项目
 
 ```terminal
-$ git clone https://github.com/zHElEARN/cloudmusic_downloader.git
-$ cd cloudmusic_downloader
+$ git clone https://github.com/zHElEARN/cloudmusic_garmin.git
+$ cd cloudmusic_garmin
 ```
 
 -   在 config.py 中配置[网易云音乐 Node.js API service](https://github.com/Binaryify/NeteaseCloudMusicApi)服务网址，默认 API 地址由[Zhe_Learn](https://github.com/zHElEARN)提供[https://ncm-api.zhelearn.com/](https://ncm-api.zhelearn.com/)
@@ -27,7 +27,7 @@ $ python app.py
 
 -   使用 [Garmin Express](https://www.garmin.com/zh-CN/software/express/windows/) 连接你的佳明设备
 
--   在 Garmin Express 中的`音乐`选择 cloudmusic_downloader 文件夹，选择歌单并发送到设备
+-   在 Garmin Express 中的`音乐`选择 cloudmusic_garmin 文件夹，选择歌单并发送到设备
 
 ![步骤图](https://assets.zhelearn.com/pictures/1671785081.gif)
 

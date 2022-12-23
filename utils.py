@@ -8,6 +8,6 @@ def not_exist_makedirs(name):
 
 
 def exist_remove(path):
-    if os.path.exist(path):
+    if os.path.exists(path):
         return os.remove(path)
     return None

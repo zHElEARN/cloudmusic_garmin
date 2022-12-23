@@ -5,7 +5,7 @@
     "version": "0.2.0",
     "configurations": [
         {
-            "name": "Python: Launch cloudmusic_downloader",
+            "name": "Python: Launch cloudmusic_garmin",
             "type": "python",
             "request": "launch",
             "program": "app.py",
