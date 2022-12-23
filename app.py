@@ -8,6 +8,7 @@ import tqdm
 import config
 
 from eyed3.id3.frames import ImageFrame
+from rich import progress
 
 requests.packages.urllib3.disable_warnings()
 
@@ -288,14 +289,14 @@ def main():
         os.makedirs("%s/%s/" % (config.tempfile_path,
                                 check_filename(playlist["name"])))
 
-    if os.path.exists("%s/%s/playlist.m3u" % (config.download_path, check_filename(playlist["name"]))):
-        os.remove("%s/%s/playlist.m3u" %
-                  (config.download_path, check_filename(playlist["name"])))
+    if os.path.exists("%s/%s/%s.m3u" % (config.download_path, check_filename(playlist["name"]), check_filename(playlist["name"]))):
+        os.remove("%s/%s/%s.m3u" % (config.download_path,
+                  check_filename(playlist["name"]), check_filename(playlist["name"])))
 
-    m3u_file = open("%s/%s/playlist.m3u" % (config.download_path,
-                                            check_filename(playlist["name"])), "w", encoding="utf-8")
+    m3u_file = open("%s/%s/%s.m3u" % (config.download_path, check_filename(
+        playlist["name"]), check_filename(playlist["name"])), "w", encoding="utf-8")
 
-    for track in tqdm.tqdm(tracks, desc="下载中", unit="music"):
+    for track in progress.track(tracks, description="下载中", auto_refresh=True):
         status, filename = download_track(track, m_cookies, bit_rate,
                                           "%s/%s/" % (config.download_path,
                                                       check_filename(playlist["name"])),
@@ -303,8 +304,8 @@ def main():
                                                       check_filename(playlist["name"])))
         if status == "failed":
             success, message = check_music(str([track["id"]]))
-            tqdm.tqdm.write("音乐 %s [%d]，下载失败，提示信息：“%s”" %
-                            (track["name"], track["id"], message))
+            progress.console.print("音乐 %s [%d]，下载失败，提示信息：“%s”" %
+                                   (track["name"], track["id"], message))
         else:
             m3u_file.write(filename + "\n")
 
