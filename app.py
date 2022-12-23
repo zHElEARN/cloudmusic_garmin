@@ -5,7 +5,7 @@ import json
 import os
 import tqdm
 
-import config
+from config import *
 import utils
 
 from eyed3.id3.frames import ImageFrame
@@ -25,10 +25,10 @@ ascii_logo = """
 
 def login(username, password):
     login_request = requests.get(
-        f"{config.api_url}login/cellphone",
+        f"{config['api_url']}login/cellphone",
         params={"phone": username, "password": password},
-        headers=config.headers,
-        proxies=config.proxies,
+        headers=config["headers"],
+        proxies=config["proxies"],
         verify=False,
     )
 
@@ -52,7 +52,7 @@ def check_login_status(cookies):
     encoded_cookies = requests.utils.cookiejar_from_dict(cookies)
 
     status_request = requests.get(
-        f"{config.api_url}login/status", headers=config.headers, proxies=config.proxies, cookies=encoded_cookies, verify=False,
+        f"{config['api_url']}login/status", headers=config["headers"], proxies=config["proxies"], cookies=encoded_cookies, verify=False,
     )
 
     decoded_response = json.loads(status_request.text)
@@ -75,10 +75,10 @@ def get_user_playlist(uid, cookies):
     collected_playlist = []
 
     playlist_request = requests.get(
-        f"{config.api_url}user/playlist",
+        f"{config['api_url']}user/playlist",
         params={"uid": uid},
-        headers=config.headers,
-        proxies=config.proxies,
+        headers=config["headers"],
+        proxies=config["proxies"],
         cookies=cookies,
         verify=False,
     )
@@ -96,10 +96,10 @@ def get_user_playlist(uid, cookies):
 
 def get_playlist_tracks(playlist_id, cookies):
     tracks_request = requests.get(
-        f"{config.api_url}playlist/track/all",
+        f"{config['api_url']}playlist/track/all",
         params={"id": playlist_id},
-        headers=config.headers,
-        proxies=config.proxies,
+        headers=config["headers"],
+        proxies=config["proxies"],
         cookies=cookies,
         verify=False,
     )
@@ -152,10 +152,10 @@ def download_track(track, cookies, br, path, local_path):
         return "exist", (check_filename(filename) + (".mp3" if "pc" not in track else ""))
 
     track_request = requests.get(
-        f"{config.api_url}song/download/url",
+        f"{config['api_url']}song/download/url",
         params={"id": track["id"], "br": br},
-        headers=config.headers,
-        proxies=config.proxies,
+        headers=config["headers"],
+        proxies=config["proxies"],
         cookies=cookies,
         verify=False,
     )
@@ -164,7 +164,9 @@ def download_track(track, cookies, br, path, local_path):
     if decoded_response["data"]["url"] is None:
         return "failed", f"{check_filename(filename)}.mp3"
 
-    file_request = requests.get(decoded_response["data"]["url"], headers=config.headers, proxies=config.proxies, verify=False, stream=True)
+    file_request = requests.get(
+        decoded_response["data"]["url"], headers=config["headers"], proxies=config["proxies"], verify=False, stream=True
+    )
 
     with open(music_filename, "wb") as f:
         for chunk in file_request.iter_content(chunk_size=512):
@@ -173,7 +175,7 @@ def download_track(track, cookies, br, path, local_path):
     # if the music is cloud stroage music, it is not processed
     # otherwise, need to manually add the id3v2 label
     if "pc" not in track:
-        cover_request = requests.get(track["al"]["picUrl"], headers=config.headers, proxies=config.proxies, verify=False, stream=True)
+        cover_request = requests.get(track["al"]["picUrl"], headers=config["headers"], proxies=config["proxies"], verify=False, stream=True)
         with open(cover_filename, "wb") as f:
             for chunk in cover_request.iter_content(chunk_size=512):
                 f.write(chunk)
@@ -193,7 +195,7 @@ def download_track(track, cookies, br, path, local_path):
 
 def check_music(ids):
     check_request = requests.get(
-        f"{config.api_url}check/music", headers=config.headers, proxies=config.proxies, verify=False, params={ids: ",".join(ids)},
+        f"{config['api_url']}check/music", headers=config["headers"], proxies=config["proxies"], verify=False, params={ids: ",".join(ids)},
     )
 
     decoded_response = json.loads(check_request.text)
@@ -206,13 +208,13 @@ def main():
 
     print(ascii_logo)
 
-    utils.not_exist_makedirs(config.download_path)
-    utils.not_exist_makedirs(config.tempfile_path)
+    utils.not_exist_makedirs(config["download_path"])
+    utils.not_exist_makedirs(config["tempfile_path"])
 
-    if os.path.exists(config.saved_cookie):
+    if os.path.exists(config["saved_cookie"]):
         answer_playlist_type = input("检测到已缓存的Cookies，是否读取已缓存Cookies（Y/N)：")
         if answer_playlist_type in ["Y", "y"]:
-            login_result = check_existed_cookie(config.saved_cookie)
+            login_result = check_existed_cookie(config["saved_cookie"])
             if login_result[0] != True:
                 print("登录失败，请尝试密码登录")
                 return
@@ -271,9 +273,9 @@ def main():
     tracks, song_ids = get_playlist_tracks(playlist["id"], m_cookies)
 
     playlist_name = check_filename(playlist["name"])
-    download_path = f"{config.download_path}/{playlist_name}/"
-    tempfile_path = f"{config.tempfile_path}/{playlist_name}/"
-    m3u_path = f"{config.download_path}/{playlist_name}/{playlist_name}.m3u"
+    download_path = f"{config['download_path']}/{playlist_name}/"
+    tempfile_path = f"{config['tempfile_path']}/{playlist_name}/"
+    m3u_path = f"{config['download_path']}/{playlist_name}/{playlist_name}.m3u"
 
     utils.not_exist_makedirs(download_path)
     utils.not_exist_makedirs(tempfile_path)
