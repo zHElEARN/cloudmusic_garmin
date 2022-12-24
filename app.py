@@ -16,10 +16,12 @@ ascii_logo = """
                                                    |_____|___/                              
 """
 
-__version__ = "0.0.1"
+__version__ = "0.0.2"
 
 
 def main():
+    use_saved_authorizations = ""
+
     c = console.Console()
     c.print(ascii_logo, highlight=False, style="red bold")
 

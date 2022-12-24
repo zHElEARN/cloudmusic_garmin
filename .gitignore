@@ -1,3 +1,6 @@
 authorizations
+app.spec
 Downloads/
-__pycache__
+__pycache__/
+build/
+dist/
