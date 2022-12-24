@@ -16,6 +16,8 @@ ascii_logo = """
                                                    |_____|___/                              
 """
 
+__version__ = "0.0.1"
+
 
 def main():
     c = console.Console()
