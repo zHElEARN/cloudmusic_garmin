@@ -3,9 +3,8 @@ import os
 import string
 import eyed3
 import requests
-import json
 
-import cloudmusic
+from config import config
 
 
 def not_exist_makedirs(name):
@@ -59,13 +58,11 @@ def download_file(url, filename, config):
             f.write(chunk)
 
 
-def save_cookies(filename, cookies):
-    with open(filename, "w") as f:
-        f.write(json.dumps(requests.utils.dict_from_cookiejar(cookies)))
+def save_session(session: str):
+    with open(config["saved_authorizations"], "w") as f:
+        f.write(session)
 
 
-def check_existed_cookie(filename):
-    with open(filename, "r") as f:
-        load_cookies = json.loads(f.read())
-
-    return cloudmusic.check_login_status(load_cookies)
+def load_sesion():
+    with open(config["saved_authorizations"], "r") as f:
+        return f.read()
