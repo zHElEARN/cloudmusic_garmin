@@ -1,4 +1,4 @@
 eyed3==0.9.7
 pyncm==1.6.8.4.1
-requests==2.27.1
+requests==2.32.2
 rich==12.6.0
