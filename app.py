@@ -42,9 +42,10 @@ def main():
         utils.exist_remove(config["saved_authorizations"])
         utils.save_session(pyncm.DumpSessionAsString(pyncm.GetCurrentSession()))
 
-    c.print(f'登录成功，用户名：[cyan]{apis.user.GetUserDetail()["profile"]["nickname"]}[/cyan]', end="\n\n")
+    user_id = pyncm.GetCurrentSession().login_info["content"]["account"]["id"]
+    c.print(f'登录成功，用户名：[cyan]{apis.user.GetUserDetail(user_id)["profile"]["nickname"]}[/cyan]', end="\n\n")
 
-    total_playlists = apis.user.GetUserPlaylists()["playlist"]
+    total_playlists = apis.user.GetUserPlaylists(user_id)["playlist"]
     created_playlists = []
     subscribed_playlists = []
     for playlist in total_playlists:
